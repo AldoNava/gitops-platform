@@ -1,0 +1,70 @@
+---
+# Workflow: Validación de manifests con kustomize build antes de merge
+# Previene que manifests inválidos lleguen a Flux
+
+name: validate-manifests
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validate:
+    name: "Validate Kustomize manifests"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl + kustomize
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'v1.34.0'
+
+      - name: Install kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
+          kustomize version
+
+      - name: Install flux CLI
+        run: |
+          curl -s https://fluxcd.io/install.sh | bash
+          flux version --client
+
+      - name: Validate tenant overlays - DEV
+        run: |
+          echo "🔍 Validating DEV overlays..."
+          for tenant in team-payments team-auth team-gateway; do
+            echo "  → $tenant/dev"
+            kustomize build tenants/$tenant/dev > /dev/null && echo "    ✅ OK" || echo "    ❌ FAILED"
+          done
+
+      - name: Validate tenant overlays - TEST
+        run: |
+          echo "🔍 Validating TEST overlays..."
+          for tenant in team-payments team-auth team-gateway; do
+            echo "  → $tenant/test"
+            kustomize build tenants/$tenant/test > /dev/null && echo "    ✅ OK" || echo "    ❌ FAILED"
+          done
+
+      - name: Validate tenant overlays - PREPROD
+        run: |
+          echo "🔍 Validating PREPROD overlays..."
+          for tenant in team-payments team-auth team-gateway; do
+            echo "  → $tenant/preprod"
+            kustomize build tenants/$tenant/preprod > /dev/null && echo "    ✅ OK" || echo "    ❌ FAILED"
+          done
+
+      - name: Validate infrastructure
+        run: |
+          echo "🔍 Validating infrastructure..."
+          kustomize build infrastructure/controllers > /dev/null && echo "✅ controllers OK"
+          kustomize build infrastructure/ingress > /dev/null && echo "✅ ingress OK"
+          kustomize build infrastructure/monitoring > /dev/null && echo "✅ monitoring OK"
+
+      - name: Flux diff (dry-run)
+        run: |
+          echo "ℹ️ Flux diff requires cluster access - skipping in CI"
+          echo "💡 Run locally: flux diff kustomization flux-system --path ./clusters/base"

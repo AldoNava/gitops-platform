@@ -1,0 +1,14 @@
+# Secrets locales (nunca commitear)
+*.secret
+secrets/
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp

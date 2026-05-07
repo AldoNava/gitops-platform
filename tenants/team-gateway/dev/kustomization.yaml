@@ -1,0 +1,33 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: team-gateway-dev
+resources:
+  - ../base
+images:
+  - name: stefanprodan/podinfo
+    newTag: "6.6.0"
+patches:
+  - patch: |-
+      - op: replace
+        path: /metadata/name
+        value: team-gateway-dev
+    target:
+      kind: Namespace
+      name: team-gateway-dev
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/1/value
+        value: "team-gateway | DEV"
+    target:
+      kind: Deployment
+      name: gateway-api
+  - patch: |-
+      - op: replace
+        path: /spec/egress/0/to/0/namespaceSelector/matchLabels/environment
+        value: dev
+    target:
+      kind: NetworkPolicy
+      name: allow-egress-to-tenants
+commonLabels:
+  environment: dev

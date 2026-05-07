@@ -1,0 +1,107 @@
+---
+# NetworkPolicy: aislamiento total para team-payments
+# Deny-all por defecto, solo se permite tráfico explícito
+
+# 1. Deny ALL ingress y egress por defecto
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: team-payments-dev
+spec:
+  podSelector: {}   # Aplica a todos los pods del namespace
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# 2. Permitir ingress desde NGINX Ingress Controller
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-nginx
+  namespace: team-payments-dev
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: payments-api
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080
+---
+# 3. Permitir egress a DNS (CoreDNS) - necesario para toda resolución de nombres
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-dns
+  namespace: team-payments-dev
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+# 4. Permitir egress a team-auth (pagos necesitan validar tokens)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-to-auth
+  namespace: team-payments-dev
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: payments-api
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              tenant: team-auth
+              # Solo al MISMO ambiente (dev→dev, test→test, preprod→preprod)
+              environment: dev   # Se sobreescribe por patch en cada ambiente
+      ports:
+        - protocol: TCP
+          port: 8080
+---
+# 5. Permitir ingress desde Prometheus (monitoring)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-prometheus
+  namespace: team-payments-dev
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: payments-api
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 8080

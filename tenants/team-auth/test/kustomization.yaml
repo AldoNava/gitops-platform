@@ -1,0 +1,49 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: team-auth-test
+resources:
+  - ../base
+images:
+  - name: stefanprodan/podinfo
+    newTag: "6.6.0"
+patches:
+  - patch: |-
+      - op: replace
+        path: /metadata/name
+        value: team-auth-test
+    target:
+      kind: Namespace
+      name: team-auth-dev
+  - patch: |-
+      - op: replace
+        path: /metadata/labels/pod-security.kubernetes.io~1enforce
+        value: privileged
+      - op: replace
+        path: /metadata/labels/pod-security.kubernetes.io~1warn
+        value: privileged
+      - op: replace
+        path: /metadata/labels/pod-security.kubernetes.io~1audit
+        value: privileged
+    target:
+      kind: Namespace
+      name: team-auth-dev
+  - patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 2
+      - op: replace
+        path: /spec/maxReplicas
+        value: 5
+    target:
+      kind: HorizontalPodAutoscaler
+      name: auth-api
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/1/value
+        value: "team-auth | TEST 🟡"
+    target:
+      kind: Deployment
+      name: auth-api
+commonLabels:
+  environment: test

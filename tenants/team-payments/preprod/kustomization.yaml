@@ -1,0 +1,82 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: team-payments-preprod
+
+resources:
+  - ../base
+
+patches:
+  # Renombrar namespace a team-payments-preprod
+  - patch: |-
+      - op: replace
+        path: /metadata/name
+        value: team-payments-preprod
+    target:
+      kind: Namespace
+      name: team-payments-dev
+
+  # PSA: preprod usa restricted (más cercano a producción)
+  - patch: |-
+      - op: replace
+        path: /metadata/labels/pod-security.kubernetes.io~1enforce
+        value: restricted
+      - op: replace
+        path: /metadata/labels/pod-security.kubernetes.io~1warn
+        value: restricted
+      - op: replace
+        path: /metadata/labels/pod-security.kubernetes.io~1audit
+        value: restricted
+    target:
+      kind: Namespace
+      name: team-payments-dev
+
+  # HPA: configuración cercana a producción
+  - patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 2
+      - op: replace
+        path: /spec/maxReplicas
+        value: 8
+    target:
+      kind: HorizontalPodAutoscaler
+      name: payments-api
+
+  # Deployment: recursos de preprod + mensaje
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/1/value
+        value: "team-payments | PREPROD 🔴"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: "500m"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "500m"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: "512Mi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "512Mi"
+    target:
+      kind: Deployment
+      name: payments-api
+
+  # NetworkPolicy: egress hacia auth-preprod
+  - patch: |-
+      - op: replace
+        path: /spec/egress/0/to/0/namespaceSelector/matchLabels/environment
+        value: preprod
+    target:
+      kind: NetworkPolicy
+      name: allow-egress-to-auth
+
+# Image tag: se actualiza solo con aprobación manual en PR
+images:
+  - name: stefanprodan/podinfo
+    newTag: "6.6.0"   # ← PROMOTION POINT: requiere aprobación de reviewer en GitHub
+
+commonLabels:
+  environment: preprod

@@ -1,0 +1,12 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  # Infrastructure layer (controllers, ingress, monitoring)
+  - ../../infrastructure/controllers
+  - ../../infrastructure/ingress
+  - ../../infrastructure/monitoring
+  # Environment-specific tenant kustomizations
+  - ../../clusters/dev
+  - ../../clusters/test
+  - ../../clusters/preprod

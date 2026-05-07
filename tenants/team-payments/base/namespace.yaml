@@ -1,0 +1,18 @@
+---
+# Namespace base para team-payments
+# PSA labels se definen aquí como baseline y se sobrescriben por ambiente via kustomize patches
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: team-payments-dev   # Se reemplaza por patch en cada ambiente
+  labels:
+    app.kubernetes.io/managed-by: flux
+    app.kubernetes.io/part-of: gitops-platform
+    tenant: team-payments
+    # Pod Security Admission (PSA) - nivel base, se sobreescribe por ambiente
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/warn: baseline
+    pod-security.kubernetes.io/warn-version: latest
+    pod-security.kubernetes.io/audit: baseline
+    pod-security.kubernetes.io/audit-version: latest

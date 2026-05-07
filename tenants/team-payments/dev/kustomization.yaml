@@ -1,0 +1,61 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: team-payments-dev
+resources:
+  - ../base
+
+# Image tag controlado por este archivo - cambiar aquí para promover a dev
+images:
+  - name: stefanprodan/podinfo
+    newTag: "6.6.0"   # ← PROMOTION POINT: GitHub Action actualiza este valor
+
+# Patches específicos para DEV
+patches:
+  # PSA: dev usa baseline
+  - patch: |-
+      - op: replace
+        path: /metadata/labels/pod-security.kubernetes.io~1enforce
+        value: baseline
+      - op: replace
+        path: /metadata/labels/pod-security.kubernetes.io~1warn
+        value: baseline
+      - op: replace
+        path: /metadata/labels/pod-security.kubernetes.io~1audit
+        value: baseline
+    target:
+      kind: Namespace
+      name: team-payments-dev
+
+  # HPA: réplicas mínimas en dev (recursos limitados)
+  - patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 1
+      - op: replace
+        path: /spec/maxReplicas
+        value: 3
+    target:
+      kind: HorizontalPodAutoscaler
+      name: payments-api
+
+  # Deployment: mensaje de ambiente
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/1/value
+        value: "team-payments | DEV 🟢"
+    target:
+      kind: Deployment
+      name: payments-api
+
+  # NetworkPolicy: egress hacia auth-dev
+  - patch: |-
+      - op: replace
+        path: /spec/egress/0/to/0/namespaceSelector/matchLabels/environment
+        value: dev
+    target:
+      kind: NetworkPolicy
+      name: allow-egress-to-auth
+
+commonLabels:
+  environment: dev

@@ -1,0 +1,139 @@
+---
+# Workflow: Promoción TEST → PREPROD con aprobación manual
+# Trigger: merge de PR con label "test" a main
+# Requiere: GitHub Environment "preprod" con required reviewers configurado
+
+name: promote-to-preprod
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+jobs:
+  check-test-promotion:
+    name: "Check if TEST promotion was merged"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+    outputs:
+      is_test_promotion: ${{ steps.check.outputs.is_test_promotion }}
+      new_tag: ${{ steps.check.outputs.new_tag }}
+    steps:
+      - name: Check PR labels and branch
+        id: check
+        run: |
+          BRANCH="${{ github.event.pull_request.head.ref }}"
+          LABELS="${{ join(github.event.pull_request.labels.*.name, ',') }}"
+          
+          echo "Branch: $BRANCH"
+          echo "Labels: $LABELS"
+          
+          if [[ "$BRANCH" == promote/test-* ]] && [[ "$LABELS" == *"test"* ]]; then
+            # Extrae el tag del nombre del branch (promote/test-6.6.0-timestamp)
+            TAG=$(echo $BRANCH | sed 's/promote\/test-//' | sed 's/-[0-9]*$//')
+            echo "is_test_promotion=true" >> $GITHUB_OUTPUT
+            echo "new_tag=$TAG" >> $GITHUB_OUTPUT
+            echo "🟡 TEST promotion merged. Tag: $TAG"
+          else
+            echo "is_test_promotion=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ Not a TEST promotion PR, skipping"
+          fi
+
+  request-preprod-approval:
+    name: "Request PREPROD approval"
+    runs-on: ubuntu-latest
+    needs: check-test-promotion
+    if: needs.check-test-promotion.outputs.is_test_promotion == 'true'
+    # ⚙️ CONFIGURAR EN GITHUB: Settings → Environments → preprod → Required reviewers
+    # Agrega tu usuario (@AldoNava) o un equipo como reviewer requerido
+    environment: preprod
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITOPS_PAT }}
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "gitops-bot"
+          git config user.email "gitops-bot@github.com"
+
+      - name: Update PREPROD overlays
+        env:
+          NEW_TAG: ${{ needs.check-test-promotion.outputs.new_tag }}
+        run: |
+          echo "🔴 Promoting to PREPROD: $NEW_TAG"
+          
+          BRANCH="promote/preprod-$NEW_TAG-$(date +%s)"
+          git checkout -b $BRANCH
+          
+          for tenant in team-payments team-auth team-gateway; do
+            FILE="tenants/$tenant/preprod/kustomization.yaml"
+            if [ -f "$FILE" ]; then
+              sed -i "s|newTag: \".*\"|newTag: \"$NEW_TAG\"|g" "$FILE"
+              echo "✅ Updated $FILE"
+            fi
+          done
+          
+          git add tenants/*/preprod/kustomization.yaml
+          git commit -m "chore(preprod): promote image stefanprodan/podinfo:$NEW_TAG to PREPROD [skip ci]"
+          git push origin $BRANCH
+          
+          echo "BRANCH=$BRANCH" >> $GITHUB_ENV
+
+      - name: Create Pull Request for PREPROD
+        env:
+          GH_TOKEN: ${{ secrets.GITOPS_PAT }}
+          NEW_TAG: ${{ needs.check-test-promotion.outputs.new_tag }}
+        run: |
+          gh pr create \
+            --title "🔴 Promote stefanprodan/podinfo:$NEW_TAG → PREPROD" \
+            --body "## Promotion Request: TEST → PREPROD
+          
+          **Image:** \`stefanprodan/podinfo:$NEW_TAG\`
+          **Source environment:** TEST ✅ (aprobado y desplegado)
+          **Target environment:** PREPROD
+          
+          > 🚨 **Este PR requiere aprobación explícita en GitHub Environment 'preprod'.**
+          > Un reviewer debe aprobar ANTES de hacer merge.
+          
+          ### Checklist de aprobación PREPROD
+          - [ ] Integration tests en TEST pasaron completamente
+          - [ ] Performance tests ejecutados
+          - [ ] Security scan del image completado
+          - [ ] Rollback plan documentado
+          - [ ] On-call engineer notificado
+          
+          ### Namespaces afectados
+          - \`team-payments-preprod\`
+          - \`team-auth-preprod\`
+          - \`team-gateway-preprod\`
+          
+          /cc @AldoNava" \
+            --base main \
+            --head $BRANCH \
+            --label "promotion" \
+            --label "preprod" \
+            --reviewer "AldoNava"
+
+  notify-promotion-complete:
+    name: "Notify PREPROD deploy"
+    runs-on: ubuntu-latest
+    needs: request-preprod-approval
+    steps:
+      - name: Summary
+        run: |
+          echo "## ✅ PREPROD Promotion Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Flux detectará el merge vía webhook y desplegará en PREPROD." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Flujo completado:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ DEV → auto-desplegado" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ TEST → aprobado y desplegado" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ PREPROD → aprobado por reviewer" >> $GITHUB_STEP_SUMMARY

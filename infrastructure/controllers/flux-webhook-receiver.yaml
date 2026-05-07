@@ -1,0 +1,68 @@
+---
+# Receiver: expone endpoint para que GitHub notifique a Flux en tiempo real
+# URL del webhook: http://<TAILSCALE_IP>:<PORT>/hook/<TOKEN_HASH>
+# Puerto por defecto del receiver: 9292
+apiVersion: notification.toolkit.fluxcd.io/v1
+kind: Receiver
+metadata:
+  name: github-receiver
+  namespace: flux-system
+spec:
+  type: github
+  events:
+    - "push"
+    - "ping"
+  # El secret debe contener la clave "token" con el webhook secret de GitHub
+  secretRef:
+    name: github-webhook-token
+  resources:
+    - apiVersion: source.toolkit.fluxcd.io/v1
+      kind: GitRepository
+      name: flux-system
+      namespace: flux-system
+---
+# Alert provider: Flux notifica a GitHub el estado de los deploys
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Provider
+metadata:
+  name: github-status
+  namespace: flux-system
+spec:
+  type: github
+  address: https://github.com/AldoNava/gitops-platform
+  secretRef:
+    name: github-token
+---
+# Alert: notifica failures en cualquier Kustomization
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Alert
+metadata:
+  name: gitops-platform-alert
+  namespace: flux-system
+spec:
+  providerRef:
+    name: github-status
+  eventSeverity: error
+  eventSources:
+    - kind: Kustomization
+      name: "*"
+      namespace: flux-system
+    - kind: HelmRelease
+      name: "*"
+      namespace: flux-system
+---
+# Service para exponer el Receiver externamente vía Tailscale/NodePort
+apiVersion: v1
+kind: Service
+metadata:
+  name: webhook-receiver
+  namespace: flux-system
+spec:
+  type: NodePort
+  selector:
+    app: notification-controller
+  ports:
+    - name: http
+      port: 80
+      targetPort: 9292
+      nodePort: 31234   # Puerto accesible desde Tailscale

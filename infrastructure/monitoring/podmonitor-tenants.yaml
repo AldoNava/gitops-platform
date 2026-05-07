@@ -1,0 +1,30 @@
+---
+# PodMonitor para scraping de métricas de todos los tenants
+# Requiere Prometheus Operator instalado
+# Por ahora solo definimos el recurso; se activará cuando instales kube-prometheus-stack
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: tenants-podmonitor
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/part-of: gitops-platform
+spec:
+  namespaceSelector:
+    matchNames:
+      - team-payments-dev
+      - team-payments-test
+      - team-payments-preprod
+      - team-auth-dev
+      - team-auth-test
+      - team-auth-preprod
+      - team-gateway-dev
+      - team-gateway-test
+      - team-gateway-preprod
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: gitops-platform
+  podMetricsEndpoints:
+    - port: http
+      path: /metrics
+      interval: 30s

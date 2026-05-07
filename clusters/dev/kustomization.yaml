@@ -1,0 +1,7 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../tenants/team-payments/dev
+  - ../../tenants/team-auth/dev
+  - ../../tenants/team-gateway/dev

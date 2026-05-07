@@ -1,0 +1,47 @@
+---
+# HPA para team-payments
+# Requiere metrics-server operativo (ver patch en infrastructure/controllers)
+# QoS Guaranteed asegura que el scheduler no evicte los pods antes de escalar
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: payments-api
+  namespace: team-payments-dev
+  labels:
+    app.kubernetes.io/name: payments-api
+    tenant: team-payments
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: payments-api
+  minReplicas: 1   # Se sobreescribe por ambiente (dev:1, test:2, preprod:2)
+  maxReplicas: 3   # Se sobreescribe por ambiente (dev:3, test:5, preprod:8)
+  metrics:
+    # Escalar cuando CPU supere 70%
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    # Escalar cuando Memory supere 80%
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60   # Esperar 60s antes de escalar arriba
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300  # Esperar 5min antes de escalar abajo
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 120
