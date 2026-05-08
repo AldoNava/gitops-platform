@@ -133,7 +133,7 @@ else
     --path=./clusters/base \
     --personal \
     --token-auth \
-    --components-extra=image-reflector-controller,image-automation-controller,notification-controller
+    --components-extra=image-reflector-controller,image-automation-controller
 fi
 
 log "FluxCD bootstrap completado"
