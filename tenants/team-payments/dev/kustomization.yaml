@@ -8,7 +8,7 @@ resources:
 # Image tag controlado por este archivo - cambiar aquí para promover a dev
 images:
   - name: stefanprodan/podinfo
-    newTag: "6.6.0"   # ← PROMOTION POINT: GitHub Action actualiza este valor
+    newTag: "6.6.2"   # ← PROMOTION POINT: GitHub Action actualiza este valor
 
 # Patches específicos para DEV
 patches:
