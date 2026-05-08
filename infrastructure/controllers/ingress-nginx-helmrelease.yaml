@@ -23,15 +23,14 @@ spec:
     remediation:
       retries: 3
   targetNamespace: ingress-nginx
+  releaseName: ingress-nginx
   values:
     controller:
-      # NodePort para kubeadm single-node (no hay cloud LB)
       service:
         type: NodePort
         nodePorts:
           http: 30080
           https: 30443
-      # QoS: Guaranteed para el controller
       resources:
         requests:
           cpu: 100m
@@ -39,27 +38,15 @@ spec:
         limits:
           cpu: 500m
           memory: 512Mi
-      # Habilitar IngressClass por defecto
       ingressClassResource:
         name: nginx
         enabled: true
         default: true
-      # Configuración como API Gateway ligero
       config:
-        # Rate limiting global
         limit-req-status-code: "429"
-        # Headers de seguridad
         hide-headers: "X-Powered-By,Server"
-        add-headers: "ingress-nginx/custom-headers"
-        # Timeouts
         proxy-connect-timeout: "10"
         proxy-read-timeout: "60"
         proxy-send-timeout: "60"
-      # Métricas para Prometheus
-      metrics:
-        enabled: true
-        serviceMonitor:
-          enabled: false  # Habilitar cuando tengas Prometheus instalado
-      # PSA: el namespace ingress-nginx tendrá nivel baseline
-      podAnnotations:
-        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+      admissionWebhooks:
+        enabled: false
