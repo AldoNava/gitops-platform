@@ -4,7 +4,6 @@ kind: Kustomization
 namespace: team-payments-test
 
 resources:
-  - networkpolicy.yaml
   - ../base
 
 # Renombrar namespace para test

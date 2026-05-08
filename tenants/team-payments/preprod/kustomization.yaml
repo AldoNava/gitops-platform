@@ -4,7 +4,6 @@ kind: Kustomization
 namespace: team-payments-preprod
 
 resources:
-  - networkpolicy.yaml
   - ../base
 
 patches:
