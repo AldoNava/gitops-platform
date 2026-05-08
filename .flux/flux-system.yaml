@@ -24,5 +24,18 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  wait: true
-  timeout: 5m
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: infrastructure
+  namespace: flux-system
+spec:
+  interval: 10m
+  path: ./infrastructure/controllers
+  prune: true
+  dependsOn:
+    - name: flux-system
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
