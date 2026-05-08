@@ -82,5 +82,3 @@ images:
   - name: stefanprodan/podinfo
     newTag: "6.6.0"   # ← PROMOTION POINT: GitHub Action actualiza este valor al aprobar PR
 
-commonLabels:
-  environment: test

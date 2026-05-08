@@ -57,5 +57,3 @@ patches:
       kind: NetworkPolicy
       name: allow-egress-to-auth
 
-commonLabels:
-  environment: dev

@@ -29,5 +29,3 @@ patches:
     target:
       kind: NetworkPolicy
       name: allow-egress-to-tenants
-commonLabels:
-  environment: dev

@@ -45,5 +45,3 @@ patches:
     target:
       kind: Deployment
       name: auth-api
-commonLabels:
-  environment: test

@@ -78,5 +78,3 @@ images:
   - name: stefanprodan/podinfo
     newTag: "6.6.0"   # ← PROMOTION POINT: requiere aprobación de reviewer en GitHub
 
-commonLabels:
-  environment: preprod
