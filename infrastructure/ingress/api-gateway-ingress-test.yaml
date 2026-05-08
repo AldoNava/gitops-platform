@@ -10,9 +10,6 @@ metadata:
     nginx.ingress.kubernetes.io/limit-rps: "30"
     nginx.ingress.kubernetes.io/limit-connections: "15"
     nginx.ingress.kubernetes.io/proxy-body-size: "10m"
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      more_set_headers "X-Environment: test";
-      more_set_headers "X-Request-ID: $request_id";
 spec:
   ingressClassName: nginx
   rules:

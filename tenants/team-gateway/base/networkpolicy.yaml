@@ -10,7 +10,6 @@ spec:
     - Ingress
     - Egress
 ---
-# Gateway recibe tráfico desde NGINX (entry point)
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -34,28 +33,6 @@ spec:
         - protocol: TCP
           port: 9898
 ---
-# Gateway puede hacer egress a payments y auth del mismo ambiente
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-egress-to-tenants
-  namespace: team-gateway-dev
-spec:
-  podSelector:
-    matchLabels:
-      app.kubernetes.io/name: gateway-api
-  policyTypes:
-    - Egress
-  egress:
-    - to:
-        - namespaceSelector:
-            matchLabels:
-              environment: dev   # Solo mismo ambiente
-      ports:
-        - protocol: TCP
-          port: 8080
----
-# Egress DNS
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -78,23 +55,3 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-ingress-prometheus
-  namespace: team-gateway-dev
-spec:
-  podSelector:
-    matchLabels:
-      app.kubernetes.io/name: gateway-api
-  policyTypes:
-    - Ingress
-  ingress:
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: monitoring
-      ports:
-        - protocol: TCP
-          port: 9898
