@@ -6,7 +6,7 @@ resources:
   - ../base
 images:
   - name: stefanprodan/podinfo
-    newTag: "6.6.2"
+    newTag: "6.6.3"
 patches:
   - patch: |-
       - op: replace
