@@ -30,6 +30,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.GITOPS_PAT }}
           fetch-depth: 2
 
       - name: Get image tag from trigger file
