@@ -66,6 +66,25 @@ fi
 log "GitHub user: $GITHUB_USER"
 log "GitHub repo: $GITHUB_REPO"
 
+# ── Crear GitHub Labels ───────────────────────────────────────────────────────
+header "GitHub Labels"
+
+# Instalar gh CLI si no está disponible
+if ! command -v gh &>/dev/null; then
+  info "Instalando gh CLI..."
+  sudo apt install gh -y
+fi
+
+# Autenticar gh con el PAT
+echo "$GITHUB_TOKEN" | gh auth login --with-token 2>/dev/null
+
+# Crear labels (--force evita error si ya existen)
+gh label create promotion --color 0075ca --repo $GITHUB_USER/$GITHUB_REPO --force
+gh label create test      --color e4e669 --repo $GITHUB_USER/$GITHUB_REPO --force
+gh label create preprod   --color d93f0b --repo $GITHUB_USER/$GITHUB_REPO --force
+
+log "GitHub labels creados"
+
 # ── Fix metrics-server ────────────────────────────────────────────────────────
 header "Fix metrics-server (kubeadm single-node)"
 
