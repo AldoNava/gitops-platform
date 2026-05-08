@@ -80,5 +80,5 @@ patches:
 # Image tag: se actualiza al promover de dev a test
 images:
   - name: stefanprodan/podinfo
-    newTag: "6.6.0"   # ← PROMOTION POINT: GitHub Action actualiza este valor al aprobar PR
+    newTag: "6.6.3"   # ← PROMOTION POINT: GitHub Action actualiza este valor al aprobar PR
 
