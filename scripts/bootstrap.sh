@@ -205,6 +205,33 @@ warn "════════════════════════�
 echo ""
 
 # ── Verificar despliegue ──────────────────────────────────────────────────────
+# ── Aplicar Kustomizations de infraestructura ─────────────────────────────────
+header "Infrastructure Kustomizations"
+
+info "Aplicando Kustomizations de infraestructura a Flux..."
+
+# Aplicar las kustomizations que Flux gestionará
+kubectl apply -f .flux/infrastructure-controllers.yaml 2>/dev/null || true
+kubectl apply -f .flux/infrastructure-ingress.yaml 2>/dev/null || true
+
+info "Esperando a que flux-system esté ready antes de reconciliar infraestructura..."
+flux reconcile kustomization flux-system --with-source
+
+info "Reconciliando infrastructure-controllers (NGINX + metrics-server)..."
+flux reconcile kustomization infrastructure-controllers 2>/dev/null || \
+  warn "infrastructure-controllers aún no ready, Flux lo reintentará automáticamente"
+
+info "Reconciliando infrastructure-ingress (API Gateway Ingress)..."
+flux reconcile kustomization infrastructure-ingress 2>/dev/null || \
+  warn "infrastructure-ingress aún no ready, Flux lo reintentará automáticamente"
+
+info "Esperando NGINX Ingress Controller..."
+kubectl wait --for=condition=available deployment \
+  -l "app.kubernetes.io/name=ingress-nginx" \
+  -n ingress-nginx \
+  --timeout=180s 2>/dev/null || warn "NGINX no ready en 180s, verificar manualmente"
+
+log "Infrastructure Kustomizations aplicadas"
 header "Verification"
 
 info "Esperando a que Flux reconcilie los recursos..."
